@@ -1,0 +1,50 @@
+{
+  "name": "qr-fileshare",
+  "version": "0.1.6",
+  "description": "Quickly transfer files to a different device via a web interface",
+  "main": "index.js",
+  "bin": {
+    "qr-fileshare": "./index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "client-dev": "cd client && yarn start -o",
+    "server-dev": "set NODE_ENV=development && nodemon index.js --ignore client/ --ignore config.json",
+    "dev": "concurrently --kill-others-on-fail \"yarn client-dev\" \"yarn server-dev\"",
+    "client-build": "cd client && yarn build",
+    "build-start": "cd client && yarn build && cd .. && yarn start",
+    "start": "set NODE_ENV=production && node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shivensinha4/qr-fileshare.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shivensinha4/qr-fileshare/issues"
+  },
+  "keywords": [
+    "file",
+    "share",
+    "fileshare",
+    "qr",
+    "terminal",
+    "browser"
+  ],
+  "homepage": "https://github.com/shivensinha4/qr-fileshare#readme",
+  "author": "Shiven Sinha <shivensinha4@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "console-png": "^1.2.1",
+    "express": "^4.16.3",
+    "multer": "^1.4.0",
+    "node-persist": "^3.0.1",
+    "opn": "^5.4.0",
+    "qr-image": "^3.2.0",
+    "socket.io": "^2.1.1",
+    "socket.io-client": "^2.1.1"
+  },
+  "devDependencies": {
+    "concurrently": "^4.0.1"
+  }
+}
