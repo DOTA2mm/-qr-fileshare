@@ -4,16 +4,24 @@ import Icon from "material-ui/Icon";
 import Snackbar from "./Snackbar";
 import { CircularProgress } from "material-ui/Progress";
 
-const style = {
+const syncStyle = {
   position: "fixed",
-  bottom: "16px",
+  bottom: "146px",
+  right: "16px",
+};
+const getStyle = {
+  position: "fixed",
+  bottom: "82px",
   right: "16px",
 };
 
 class ClipboardSyncButton extends Component {
   constructor() {
     super();
+    this.syncBtn = React.createRef();
+    this.getBtn = React.createRef();
     this.state = {
+      sync: 0,
       clipboardSyncing: false,
     };
   }
@@ -24,9 +32,9 @@ class ClipboardSyncButton extends Component {
         <Button
           variant="fab"
           color="secondary"
-          style={style}
+          style={syncStyle}
           onClick={this.syncClipboard}
-          onKeyPress={this.handleKeyPress}
+          ref={this.syncBtn}
         >
           {this.state.clipboardSyncing ? (
             <CircularProgress
@@ -39,19 +47,38 @@ class ClipboardSyncButton extends Component {
             <Icon>cloud_upload</Icon>
           )}
         </Button>
-        <Snackbar message="Clipboard Synced" identity="syncClipboard" />
+
+        <Button
+          variant="fab"
+          color="secondary"
+          style={getStyle}
+          onClick={this.getClipboard}
+          ref={this.getBtn}
+        >
+          {this.state.clipboardSyncing ? (
+            <CircularProgress
+              variant="indeterminate"
+              style={{ color: "#FFF" }}
+              size={30}
+              thickness={5}
+            />
+          ) : (
+            <Icon>cloud_download</Icon>
+          )}
+        </Button>
+        <Snackbar message={ this.sync ? "Clipboard Synced" : "Copied to clipboard" } identity="syncClipboard" />
       </div>
     );
   }
 
   syncClipboard = () => {
-    this.setState({ clipboardSyncing: true });
+    this.setState({ clipboardSyncing: true, sync: 1 });
 
     navigator.permissions.query({ name: "clipboard-read" }).then((result) => {
       // If permission to read the clipboard is granted or if the user will
       // be prompted to allow it, we proceed.
 
-      if (result.state == "granted" || result.state == "prompt") {
+      if (result.state === "granted" || result.state === "prompt") {
         navigator.clipboard.readText().then((text) => {
           const queryOptions = {
             method: "post",
@@ -60,20 +87,49 @@ class ClipboardSyncButton extends Component {
               'Content-Type': 'application/json'
             },
           };
-          fetch("/api/text", queryOptions).then((response) => {
+          fetch("/api/clipboard", queryOptions).then((response) => {
             document.getElementById("syncClipboardSnackbarShowButton").click();
             this.setState({ clipboardSyncing: !this.state.clipboardSyncing });
           });
+        });
+      } else {
+        console.log(result);
+        console.log(document.execCommand('paste'));
+      }
+    }).catch(e => {
+      console.log(e)
+    });
+  }
+
+  getClipboard = () => {
+    this.setState({ clipboardSyncing: true, sync: 0 });
+
+    navigator.permissions.query({ name: "clipboard-write" }).then((result) => {
+      // If permission to read the clipboard is granted or if the user will
+      // be prompted to allow it, we proceed.
+
+      if (result.state === "granted" || result.state === "prompt") {
+        fetch("/api/clipboard").then(response => response.text()).then(text => {
+
+          document.getElementById("syncClipboardSnackbarShowButton").click();
+          this.setState({ clipboardSyncing: !this.state.clipboardSyncing });
+          navigator.clipboard.writeText(text);
         });
       } else {
       }
     });
   }
 
-  handleKeyPress = (event) => {
-    if(event.key === 'Enter'){
-      console.log('enter press here! ')
-    }
+  componentDidMount() {
+    const _self = this;
+    document.addEventListener('keypress', (ev) => {
+      // 's' means Sync clipboard
+      if (ev.keyCode === 115) {
+        _self.syncBtn.current.props.onClick();
+      } else if (ev.keyCode === 103) {
+        _self.getBtn.current.props.onClick();
+      }
+    })
   }
 }
 

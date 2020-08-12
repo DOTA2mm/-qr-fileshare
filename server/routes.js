@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const mkdirp = require('mkdirp');
 const multer = require('multer');
 const express = require('express');
 const storage = multer.diskStorage({
@@ -75,11 +76,20 @@ module.exports = (app) => {
   });
 
   // Upload clipboard text
-  app.post('/api/text/', (req, res) => {
+  app.post('/api/clipboard', (req, res) => {
     const clipboardText = req.body.text;
-    debugger
-    fs.writeFile(path.resolve(__dirname, './uploads', 'clipboard.txt'), clipboardText, { flag: 'w' }, () => {
-      res.sendStatus(201);
+    mkdirp(path.resolve(__dirname, '../uploads')).then(() => {
+      fs.writeFile(path.resolve(__dirname, '../uploads', 'clipboard.txt'), clipboardText, (e) => {
+        res.sendStatus(201);
+      })
+    }).catch(e => {
+      res.status(502).send('Unknow error.');
+    })
+  });
+
+  app.get('/api/clipboard', (req, res) => {
+    fs.readFile(path.resolve(__dirname, '../uploads', 'clipboard.txt'), (e, data) => {
+      res.send(e ? '' : data.toString());
     })
   })
 };
