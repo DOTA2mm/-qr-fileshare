@@ -9,6 +9,7 @@ const qr = require('qr-image');
 const pngStringify = require('console-png');
 const storage = require('node-persist');
 const fs = require('fs');
+const https = require('https');
 const path = require('path');
 const route = require('./server/routes');
 const getInterfaceAddress = require('./server/getInterfaceAddress');
@@ -43,14 +44,22 @@ app.use((req, res, next) => {
   next();
 });
 
+const key = fs.readFileSync(__dirname + '/certs/selfsigned.key');
+const cert = fs.readFileSync(__dirname + '/certs/selfsigned.crt');
+const options = {
+  key: key,
+  cert: cert
+};
+const server = https.createServer(options, app);
+
 const createServer = (address) => {
   let options = [0, address];
   if (devEnv) {
     options = [8000];
   }
 
-  const server = app.listen(...options, async () => {
-    const serverAcquiredAddress = `http://${server.address().address}:${server.address().port}`;
+  const service = server.listen(...options, async () => {
+    const serverAcquiredAddress = `https://${service.address().address}:${service.address().port}`;
     console.log(serverAcquiredAddress);
     displayQrCode(serverAcquiredAddress);
     !devEnv && opn(serverAcquiredAddress);
@@ -58,7 +67,7 @@ const createServer = (address) => {
     await storage.init();
     await storage.clear();
     configureApp();
-    configureSocketServer(server);
+    configureSocketServer(service);
   });
 };
 

@@ -6,7 +6,11 @@ const express = require('express');
 const storage = multer.diskStorage({
   destination: 'uploads/',
   filename: (req, file, cb) => {
-    cb(null, `${file.originalname}-${Date.now()}`);
+    const originalname = file.originalname
+    const fileExt = originalname.slice(originalname.lastIndexOf('.'))
+    const fileName = originalname.slice(0, originalname.lastIndexOf('.'))
+
+    cb(null, `${fileName}-${Math.random().toString(36).slice(2)}${fileExt}`);
   }
 });
 const upload = multer({storage});
