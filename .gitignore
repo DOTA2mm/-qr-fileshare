@@ -1,0 +1,9 @@
+node_modules
+client/node_modules
+.node-persist
+generated_qr.svg
+yarn.lock
+uploads
+.idea
+.vscode
+client/build
