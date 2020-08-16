@@ -199,6 +199,7 @@ class Clip {
     selection.addRange(range)
     this.el.setSelectionRange(0, 999999)
     document.execCommand('copy')
+    this.el.blur()
     document.body.removeChild(this.el)
   }
 }
