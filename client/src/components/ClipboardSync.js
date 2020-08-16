@@ -21,7 +21,7 @@ class ClipboardSyncButton extends Component {
     this.syncBtn = React.createRef();
     this.getBtn = React.createRef();
     this.state = {
-      sync: 0,
+      resInfo: '',
       clipboardSyncing: false,
     };
   }
@@ -66,58 +66,101 @@ class ClipboardSyncButton extends Component {
             <Icon>cloud_download</Icon>
           )}
         </Button>
-        <Snackbar message={ this.sync ? "Clipboard Synced" : "Copied to clipboard" } identity="syncClipboard" />
+        <Snackbar message={this.state.resInfo} identity="syncClipboard" />
       </div>
     );
   }
 
   syncClipboard = () => {
-    this.setState({ clipboardSyncing: true, sync: 1 });
+    function syncToRemote (text) {
+      const queryOptions = {
+        method: "post",
+        body: JSON.stringify({ text }),
+        headers: {
+          'Content-Type': 'application/json'
+        },
+      };
+      return fetch("/api/clipboard", queryOptions)
+    }
 
-    navigator.permissions.query({ name: "clipboard-read" }).then((result) => {
-      // If permission to read the clipboard is granted or if the user will
-      // be prompted to allow it, we proceed.
+    this.setState({ clipboardSyncing: true });
 
-      if (result.state === "granted" || result.state === "prompt") {
-        navigator.clipboard.readText().then((text) => {
-          const queryOptions = {
-            method: "post",
-            body: JSON.stringify({ text }),
-            headers: {
-              'Content-Type': 'application/json'
-            },
-          };
-          fetch("/api/clipboard", queryOptions).then((response) => {
-            document.getElementById("syncClipboardSnackbarShowButton").click();
-            this.setState({ clipboardSyncing: !this.state.clipboardSyncing });
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: "clipboard-read" }).then((result) => {
+        // If permission to read the clipboard is granted or if the user will
+        // be prompted to allow it, we proceed.
+  
+        if (result.state === "granted" || result.state === "prompt") {
+          navigator.clipboard.readText().then((text) => {
+            syncToRemote(text).then((response) => {
+              this.setState({ resInfo: 'Sync Success.' })
+              console.log(this);
+            });
           });
-        });
-      } else {
-        console.log(result);
-        console.log(document.execCommand('paste'));
-      }
-    }).catch(e => {
-      console.log(e)
-    });
+        } else {
+          this.setState({ resInfo: 'Sync Faile.' })
+        }
+      }).catch(e => {
+        console.log(e);
+        this.setState({ resInfo: 'Sync Faile.' })
+      }).finally(() => {
+        this.setState({ clipboardSyncing: false });
+        setTimeout(() => {
+          document.getElementById("syncClipboardSnackbarShowButton").click();
+        })
+      });
+    } else {
+      syncToRemote(new Clip().read()).then(() => {
+        this.setState({ clipboardSyncing: false, resInfo: 'Sync Success.' });
+      }).catch(e => {
+        this.setState({ clipboardSyncing: false, resInfo: 'Sync Faile.' });
+      }).finally(() => {
+        setTimeout(() => {
+          document.getElementById("syncClipboardSnackbarShowButton").click();
+        })
+      })
+    }
   }
 
   getClipboard = () => {
-    this.setState({ clipboardSyncing: true, sync: 0 });
+    this.setState({ clipboardSyncing: true });
 
-    navigator.permissions.query({ name: "clipboard-write" }).then((result) => {
-      // If permission to read the clipboard is granted or if the user will
-      // be prompted to allow it, we proceed.
-
-      if (result.state === "granted" || result.state === "prompt") {
-        fetch("/api/clipboard").then(response => response.text()).then(text => {
-
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: "clipboard-write" }).then((result) => {
+        // If permission to read the clipboard is granted or if the user will
+        // be prompted to allow it, we proceed.
+  
+        if (result.state === "granted" || result.state === "prompt") {
+          fetch("/api/clipboard").then(response => response.text()).then(text => {
+            navigator.clipboard.writeText(text);
+            this.setState({ resInfo: 'Get Success.' })
+          });
+        } else {
+          console.log(result);
+          this.setState({ resInfo: 'Get Faile.' })
+        }
+      }).catch(e => {
+        console.log(e);
+        this.setState({ resInfo: 'Get Faile.' })
+      }).finally(() => {
+        this.setState({ clipboardSyncing: false });
+        setTimeout(() => {
           document.getElementById("syncClipboardSnackbarShowButton").click();
-          this.setState({ clipboardSyncing: !this.state.clipboardSyncing });
-          navigator.clipboard.writeText(text);
-        });
-      } else {
-      }
-    });
+        })
+      });
+    } else {
+      fetch("/api/clipboard").then(response => response.text()).then(text => {
+        new Clip().write(text)
+        this.setState({ clipboardSyncing: false, resInfo: 'Get Success.' })
+      }).catch(e => {
+        this.setState({ clipboardSyncing: false, resInfo: 'Get Faile.' });
+      }).finally(() => {
+        setTimeout(() => {
+          document.getElementById("syncClipboardSnackbarShowButton").click();
+        })
+      })
+    }
+
   }
 
   componentDidMount() {
@@ -130,6 +173,33 @@ class ClipboardSyncButton extends Component {
         _self.getBtn.current.props.onClick();
       }
     })
+  }
+}
+
+class Clip {
+  constructor() {
+    this.el = document.createElement('textarea')
+  }
+  read() {
+    document.body.appendChild(this.el)
+    this.el.focus()
+    document.execCommand('paste')
+    this.el.blur()
+    const text = this.el.value
+    document.body.removeChild(this.el)
+    return text
+  }
+  write(text) {
+    document.body.appendChild(this.el)
+    this.el.value = text
+    const range = document.createRange()
+    range.selectNodeContents(this.el)
+    const selection = window.getSelection()
+    selection.removeAllRanges()
+    selection.addRange(range)
+    this.el.setSelectionRange(0, 999999)
+    document.execCommand('copy')
+    document.body.removeChild(this.el)
   }
 }
 
